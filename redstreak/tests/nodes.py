@@ -21,6 +21,26 @@ class TestStringMethods(unittest.TestCase):
         cut = nodes.Selection(example_str, predicate)
         self.assertEqual("".join(cut), "essng")
 
+    def test_selection_scan_str(self):
+        example_str = 'test string'
+
+        def predicate(char):
+            return char in "esng"
+
+        cut = nodes.Selection(nodes.Scan(example_str), predicate)
+        self.assertEqual("".join(cut), "essng")
+
+    def test_selection_recursive(self):
+
+        def divis_2(num):
+            return num % 2 == 0
+
+        def divis_3(num):
+            return num % 3 == 0
+
+        cut = nodes.Selection(nodes.Selection(range(40), divis_3), divis_2)
+        self.assertEqual(list(cut), [0, 6, 12, 18, 24, 30, 36])
+
     def test_scan_csv(self):
         cut = nodes.Scan(self.get_csv())
 
@@ -34,7 +54,6 @@ class TestStringMethods(unittest.TestCase):
         ]
         self.assertEqual(got, expected)
 
-    @unittest.skip
     def test_selection_csv(self):
         def is_fantasy(row):
             return 'Fantasy' in row[2]
@@ -49,16 +68,40 @@ class TestStringMethods(unittest.TestCase):
             ["2",
              "Jumanji (1995)",
              "Adventure|Children|Fantasy"],
-            [29,
+            ["29",
              "City of Lost Children, The (Cité des enfants perdus, La) (1995)",
              "Adventure|Drama|Fantasy|Mystery|Sci-Fi"],
         ]
 
         self.assertEqual(got, expected)
 
+    def test_order(self):
+        raw = [1, 50, 3, 2, 53, 23]
+        self.assertEqual(list(nodes.Order(raw, None)), [1, 2, 3, 23, 50, 53])
+
+    def test_order_key(self):
+        raw = ["a", "abracadbra", "bd", "test", "testimony", ]
+        expected = ["bd", "a", "test", "testimony", "abracadbra"]
+
+        def vowel_count(string):
+            count = 0
+            for char in string:
+                if char in 'aeiou':
+                    count += 1
+            return count
+
+        self.assertEqual(list(nodes.Order(raw, vowel_count)),
+                         expected)
+
+    def test_limit(self):
+        self.assertEqual(
+            list(nodes.Limit(range(100), 10)),
+            list(range(10))
+        )
+
     def get_csv(self):
         test_dir = os.path.dirname(__file__)
-        hotelpath = os.path.join(test_dir, "data", "hotel.csv")
+        hotelpath = os.path.join(test_dir, "data", "movies.csv")
         with open(hotelpath, newline='') as csvfile:
             # Let's pull this all into memory so we can return the csv reader
             # cleanly
