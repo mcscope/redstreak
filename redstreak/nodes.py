@@ -15,10 +15,18 @@ class Scan:
     def __next__(self):
         return next(self._iter)
 
+# The jury is still out over which is more readable
+# Node(args, data) or Node(data, args)
+# The former is more readable e.g. limit 50 (select )
+# The latter is more consistent.
+# I'm leaning towards (args, data) so each subclass must redefine data
+# in order to keep that ordering
+
 
 @attr.s
 class Selection(Scan):
     predicate = attr.ib()
+    data = attr.ib()
 
     def __next__(self):
         while True:
@@ -31,6 +39,7 @@ class Selection(Scan):
 @attr.s
 class Order(Scan):
     key = attr.ib()
+    data = attr.ib()
 
     def __attrs_post_init__(self):
         # I think ideally this is some kind of streaming sorting algorithm
@@ -44,6 +53,7 @@ class Order(Scan):
 @attr.s
 class Limit(Scan):
     limit = attr.ib()
+    data = attr.ib()
     count = attr.ib(default=0)
 
     def __next__(self):

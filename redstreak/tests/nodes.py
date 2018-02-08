@@ -18,7 +18,7 @@ class TestStringMethods(unittest.TestCase):
         def predicate(char):
             return char in "esng"
 
-        cut = nodes.Selection(example_str, predicate)
+        cut = nodes.Selection(predicate, example_str)
         self.assertEqual("".join(cut), "essng")
 
     def test_selection_scan_str(self):
@@ -27,7 +27,7 @@ class TestStringMethods(unittest.TestCase):
         def predicate(char):
             return char in "esng"
 
-        cut = nodes.Selection(nodes.Scan(example_str), predicate)
+        cut = nodes.Selection(predicate, nodes.Scan(example_str))
         self.assertEqual("".join(cut), "essng")
 
     def test_selection_recursive(self):
@@ -38,7 +38,12 @@ class TestStringMethods(unittest.TestCase):
         def divis_3(num):
             return num % 3 == 0
 
-        cut = nodes.Selection(nodes.Selection(range(40), divis_3), divis_2)
+        cut = nodes.Selection(
+            divis_2,
+            nodes.Selection(
+                divis_3,
+                range(40)
+            ))
         self.assertEqual(list(cut), [0, 6, 12, 18, 24, 30, 36])
 
     def test_scan_csv(self):
@@ -58,7 +63,7 @@ class TestStringMethods(unittest.TestCase):
         def is_fantasy(row):
             return 'Fantasy' in row[2]
 
-        cut = nodes.Selection(self.get_csv(), is_fantasy)
+        cut = nodes.Selection(is_fantasy, self.get_csv())
 
         got = list(itertools.islice(cut, 3))
         expected = [
@@ -77,7 +82,8 @@ class TestStringMethods(unittest.TestCase):
 
     def test_order(self):
         raw = [1, 50, 3, 2, 53, 23]
-        self.assertEqual(list(nodes.Order(raw, None)), [1, 2, 3, 23, 50, 53])
+        self.assertEqual(list(nodes.Order(None, raw)),
+                         [1, 2, 3, 23, 50, 53])
 
     def test_order_key(self):
         raw = ["a", "abracadbra", "bd", "test", "testimony", ]
@@ -90,12 +96,14 @@ class TestStringMethods(unittest.TestCase):
                     count += 1
             return count
 
-        self.assertEqual(list(nodes.Order(raw, vowel_count)),
+        self.assertEqual(list(nodes.Order(vowel_count, raw)),
                          expected)
 
     def test_limit(self):
         self.assertEqual(
-            list(nodes.Limit(range(100), 10)),
+            list(nodes.Limit(
+                10,
+                range(100))),
             list(range(10))
         )
 

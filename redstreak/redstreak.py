@@ -21,7 +21,6 @@ def run_query(data):
     """
     A place to manually program queries
     """
-    base = nodes.Scan(data)
 
     def netflix_filter(row):
         genres = row['genres']
@@ -50,18 +49,22 @@ def run_query(data):
         return -1 * score
 
     report = nodes.Limit(
+        50,
         nodes.Order(
-            nodes.Selection(base, netflix_filter),
-            netflix_score),
-        50
+            netflix_score,
+            nodes.Selection(
+                netflix_filter,
+                nodes.Scan(data)
+            )
+        )
     )
     print("REDSTREAK RESULT:")
     print("-" * 80)
-    print(f"#: {'Title':39.39}|{'Genres':39.39}")
+    print(f"# : {'Title':39.39}  |{'Genres':39.39}")
 
     print("-" * 80)
     for i, row in enumerate(report):
-        print(f"{i:<2}: {row['title']:39.39}|{row['genres']:39.39}")
+        print(f"{i:<2}: {row['title']:39.39} |{row['genres']:39.39}")
 
 
 def main():
