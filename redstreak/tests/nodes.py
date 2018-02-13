@@ -5,7 +5,7 @@ import os
 import redstreak.nodes as nodes
 
 
-class TestStringMethods(unittest.TestCase):
+class TestRedStreakNodes(unittest.TestCase):
 
     def test_scan_str(self):
         example_str = 'test'
@@ -81,7 +81,7 @@ class TestStringMethods(unittest.TestCase):
         self.assertEqual(got, expected)
 
     def test_order(self):
-        raw = [1, 50, 3, 2, 53, 23]
+        raw = iter([1, 50, 3, 2, 53, 23])
         self.assertEqual(list(nodes.Order(None, raw)),
                          [1, 2, 3, 23, 50, 53])
 
@@ -106,6 +106,68 @@ class TestStringMethods(unittest.TestCase):
                 range(100))),
             list(range(10))
         )
+
+    # def test_sum(self):
+    #     self.assertEqual(
+    #         list(nodes.Sum(range(101))),
+    #         [5050])
+
+    def test_field_sum(self):
+        self.assert_drain(nodes.Sum('value',
+                                    self.aggregate_node()),
+                          {"Sum": 5050})
+
+    def test_count(self):
+
+        self.assert_drain(nodes.Count('value',
+                                      self.aggregate_node()),
+                          {"Count": 101})
+
+    def test_mean(self):
+        self.assert_drain(nodes.Mean('value',
+                                     self.aggregate_node()),
+                          {"Mean": 50.0})
+
+    def assert_drain(self, node, value):
+        self.assertEqual(list(node), [value])
+
+    def aggregate_node(self):
+        return ({'value': x} for x in range(101))
+
+    def test_naive_inner_join(self):
+        left = ({"value": x, 'double': 2 * x}
+                for x in range(0, 10))
+        right = ({"value": x, 'triple': 3 * x}
+                 for x in range(5, 15))
+        right.append({"value": 7, "quadruple": 7 * 4})
+        expected = [
+            {"value": 5, 'double': 10, "triple": 15},
+            {"value": 6, 'double': 12, "triple": 18},
+            {"value": 7, 'double': 14, "triple": 21},
+            {"value": 7, 'double': 14, "quadruple": 28},
+            {"value": 8, 'double': 16, "triple": 24},
+            {"value": 9, 'double': 18, "triple": 27},
+        ]
+        self.assertEqual(
+            list(nodes.NaiveInnerJoin('value', left, right)),
+            expected)
+
+    def test_group_by_sum(self):
+        test_values = [{"value": x, "operation": "solo"}
+                       for x in range(11)]
+        test_values += [{"value": x * 2, "operation": "double"}
+                        for x in range(11)]
+        test_values += [{"value": x * 3, "operation": "triple"}
+                        for x in range(11)]
+        expected = [
+            {'Sum': 55, 'operation': "solo", },
+            {'Sum': 110, 'operation': "double", },
+            {'Sum': 165, 'operation': "triple", }
+        ]
+
+        result = nodes.Sum('value', test_values, group_by="operation")
+
+        self.assertEqual(list(result), expected)
 
     def get_csv(self):
         test_dir = os.path.dirname(__file__)
