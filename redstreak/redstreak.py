@@ -2,6 +2,7 @@ import csv
 import argparse
 from nodes import Limit, Order, Selection, Scan, NaiveInnerJoin, Mean
 from lib.profile import print_memory
+from io import readtups
 
 """
 RedStreak - an example Database
@@ -9,6 +10,13 @@ RedStreak - an example Database
 Written for Bradfield CS database course
 Spring 2018 by Lady Red
 
+
+
+TODO:
+~ Out of Core sort
+~ Projection Node
+~ Convert everything to use tuples
+~ Binary storage format
 
 """
 
@@ -61,7 +69,7 @@ def netflix_query(data):
 
 def highly_rated(movies, ratings):
     def rating_high_to_low(row):
-        return -1 * row['rating']
+        return -1 * row['Mean']
 
     report = Limit(
         50,
@@ -70,8 +78,8 @@ def highly_rated(movies, ratings):
             NaiveInnerJoin(
                 'movieId',
                 Mean(
+                    "rating",
                     Scan(ratings),
-                    field="rating",
                     group_by="movieId"
                 ),
                 Scan(movies),
@@ -112,7 +120,7 @@ def main():
     with open(csv_path, newline='') as csvfile:
         with open(csv_path2, newline='') as csvfile2:
 
-            run_query(csv.DictReader(csvfile), csv.DictReader(csvfile2))
+            run_query(readtups(file), readtups(file))
 
 
 if __name__ == '__main__':

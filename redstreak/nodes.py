@@ -1,4 +1,5 @@
 import attr
+import inspect
 from textwrap import indent
 from collections import defaultdict
 
@@ -60,34 +61,7 @@ class Selection(Scan):
                 return item
 
     def additional_explain(self):
-        import inspect
-
         return "\nFilter:\n" + inspect.getsource(self.predicate)
-
-
-@attr.s
-class Order(Scan):
-    key = attr.ib()
-    data = attr.ib()
-    _iter = attr.ib(default=None, init=False)
-
-    def __attrs_post_init__(self):
-        # I think ideally this is some kind of streaming sorting algorithm
-        # but that seems quite hard right now. this will exhaust the data nodes
-        pass
-
-    def __next__(self):
-
-        if not self._iter:
-            if self.key:
-                self._iter = iter(sorted(self.data, key=self.key))
-            else:
-                self._iter = iter(sorted(self.data))
-        return next(self._iter)
-
-    def additional_explain(self):
-        import inspect
-        return "\nKey:\n" + inspect.getsource(self.key)
 
 
 @attr.s
@@ -188,34 +162,34 @@ class Mean(Aggregate):
         return total / count
 
 
-# @attr.s
-# class NaiveInnerJoin(Scan):
-#     """
-#     For this simple join
-#     (written on the first day of class before the Join unit)
-#     We make a new record assuming that the
-#     left and right(data) match on a field exactly
+@attr.s
+class NaiveInnerJoin(Scan):
+    """
+    For this simple join
+    (written on the first day of class before the Join unit)
+    We make a new record assuming that the
+    left and right(data) match on a field exactly
 
-#     This relies on being able to hold the entirety of the right table in memory
-#     """
-#     field = attr.ib()
-#     left = attr.ib()
-#     data = attr.ib()
+    This relies on being able to hold the entirety of the right table in memory
+    """
+    field = attr.ib()
+    left = attr.ib()
+    data = attr.ib()
 
-#     def join(self):
-#         right = defaultdict(list)
-#         for item in self.data:
-#             right[item[self.field]].append(item)
+    def join(self):
+        right = defaultdict(list)
+        for item in self.data:
+            right[item[self.field]].append(item)
 
-#         for item in self.left:
-#             matches = right[item[self.field]]
-#             for match in matches:
-#                 new_record = item.copy()
-#                 new_record.update(match)
-#                 yield new_record
+        for item in self.left:
+            matches = right[item[self.field]]
+            for match in matches:
+                new_record = item.copy()
+                new_record.update(match)
+                yield new_record
 
-#     def __iter__(self):
-#         return self.join()
+    def __iter__(self):
+        return self.join()
 
-#     def additional_explain(self):
-#         return f"\n{_sub_explain(self.left)}"
+    def additional_explain(self):
+        return f"\n{_sub_explain(self.left)}"
