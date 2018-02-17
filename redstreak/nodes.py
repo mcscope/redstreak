@@ -19,7 +19,7 @@ def _sub_explain(data):
 
 @attr.s
 class Scan:
-    REQUIRES_ORDERED = False
+    REQUIRES_ORDERED_INPUT = False
     data = attr.ib()
     _iter = attr.ib(init=False)
 
@@ -89,7 +89,7 @@ SENTINAL_NO_PREVIOUS_TUPLE = "SENTINAL_NO_PREVIOUS_TUPLE"
 
 @attr.s
 class Aggregate(Scan):
-    REQUIRES_ORDERED = True
+    REQUIRES_ORDERED_INPUT = True
     field = attr.ib()
     data = attr.ib()
     group_by = attr.ib(default=None)

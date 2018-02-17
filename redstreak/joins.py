@@ -1,5 +1,6 @@
 import attr
-from nodes import Scan
+from collections import defaultdict
+from redstreak.nodes import Scan
 
 
 @attr.s
@@ -70,4 +71,58 @@ class NestedLoopJoin(Scan):
     def additional_explain(self):
         return f"\n{_sub_explain(self.left)}"
 
-# TODO sort merge join
+
+@attr.s
+class BufferedIter:
+    _iter = attr.ib()
+    field = attr.ib()
+    head = attr.ib(default=None)
+    matches = attr.ib(default=[])
+    matchfield = attr.ib(default=None)
+
+    def __attrs_post_init__(self):
+        self.fetch()
+
+    def fetch(self):
+        self.head = next(self._iter)
+        # TODO catch
+        self.matchfield = self.head[field]
+        while self.head[self.field] == self.matchfield:
+            self.matches.append(lhead)
+            # todo catch StopIteration
+            self.head = next(self._iter)
+
+        # TODO write to file if necessary
+
+
+@attr.s
+class SortMergeJoin(Scan):
+    """
+    The input to both of these must be sorted!
+    That's the responsibility of the query planner!
+    """
+    REQUIRES_ORDERED_INPUT = True
+    field = attr.ib()
+    left = attr.ib()
+    data = attr.ib()
+
+    def join(self):
+        left = BufferedIter(self.left, self.field)
+        right = BufferedIter(self.data, self.field)
+        if right.matchfield == left.matchfield:
+            for left_record in left.matches:
+                for right_record in right.matches:
+                    new_record = left_record.copy()
+                    new_record.update(right_record)
+                    yield new_record
+
+        elif right.matchfield < left.matchfield:
+            right.fetch()
+        else:
+            left.fetch()
+
+    def __iter__(self):
+        return self.join()
+
+    def additional_explain(self):
+        return f"\n{_sub_explain(self.left)}"
