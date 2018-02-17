@@ -12,8 +12,6 @@ EST_RECORD_SIZE = 900
 
 MAX_RECORD_LEN = MAX_MEMORY_SIZE_BYTES / EST_RECORD_SIZE
 
-# TODO keep track of file pointers!!
-
 
 class InTooDeepException(Exception):
     pass

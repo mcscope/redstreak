@@ -32,6 +32,10 @@ class Scan:
     def __next__(self):
         return next(self._iter)
 
+    def reset(self):
+        self.data.reset()
+        self._iter = iter(self.data)
+
     def additional_explain(self):
         return ""
 
@@ -160,36 +164,3 @@ class Mean(Aggregate):
         if not count:
             raise StopIteration
         return total / count
-
-
-@attr.s
-class NaiveInnerJoin(Scan):
-    """
-    For this simple join
-    (written on the first day of class before the Join unit)
-    We make a new record assuming that the
-    left and right(data) match on a field exactly
-
-    This relies on being able to hold the entirety of the right table in memory
-    """
-    field = attr.ib()
-    left = attr.ib()
-    data = attr.ib()
-
-    def join(self):
-        right = defaultdict(list)
-        for item in self.data:
-            right[item[self.field]].append(item)
-
-        for item in self.left:
-            matches = right[item[self.field]]
-            for match in matches:
-                new_record = item.copy()
-                new_record.update(match)
-                yield new_record
-
-    def __iter__(self):
-        return self.join()
-
-    def additional_explain(self):
-        return f"\n{_sub_explain(self.left)}"
