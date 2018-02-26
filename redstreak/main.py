@@ -1,8 +1,7 @@
 import csv
 import argparse
-from nodes import Limit, Order, Selection, Scan, NaiveInnerJoin, Mean
-from lib.profile import print_memory
-from serialize import readtups
+from nodes import Limit, Selection, Scan, Mean
+from redstreak.serialize import FileScan
 
 """
 RedStreak - an example Database
@@ -67,33 +66,42 @@ def netflix_query(data):
     return report
 
 
-def highly_rated(movies, ratings):
-    def rating_high_to_low(row):
-        return -1 * row['Mean']
-
+def simple_record_query(data):
     report = Limit(
         50,
-        Order(
-            rating_high_to_low,
-            NaiveInnerJoin(
-                'movieId',
-                Mean(
-                    "rating",
-                    Scan(ratings),
-                    group_by="movieId"
-                ),
-                Scan(movies),
-            ),
-        )
+        Selection(lambda row: "War" in row.genres,
+                  data
+                  )
     )
     return report
 
 
-def run_query(movies, ratings):
+# def highly_rated(movies, ratings):
+#     def rating_high_to_low(row):
+#         return -1 * row['Mean']
+
+#     report = Limit(
+#         50,
+#         Order(
+#             rating_high_to_low,
+#             NaiveInnerJoin(
+#                 'movieId',
+#                 Mean(
+#                     "rating",
+#                     Scan(ratings),
+#                     group_by="movieId"
+#                 ),
+#                 Scan(movies),
+#             ),
+#         )
+#     )
+#     return report
+
+
+def run_query(report):
     """
     A place to manually program queries
     """
-    report = highly_rated(movies, ratings)
 
     print(report.explain())
     print("REDSTREAK RESULT:")
@@ -102,25 +110,12 @@ def run_query(movies, ratings):
 
     print("-" * 80)
     for i, row in enumerate(report):
-        buff = []
-        for key, value in row.items():
-            if key == 'timestamp' or "Id" in key:
-                continue
-            buff.append(f"{value:3.30}")
-        print(i, " | ".join(buff))
-        # print(f"{i:<2}: {row['title']:39.39} |{row['genres']:39.39}")
+        print(f"{i} {row}")
 
 
 def main():
-    # TODO remove
-    csv_path = "../../ml-20m/movies.csv"
-    # csv_path2 = "../../ml-20m/ratings.csv"
-    csv_path2 = "1k"
-
-    with open(path. "wb") as file:
-        with open(ath2. "wb") as file2:
-
-            run_query(read_all_pages(file), read_all_pages(file))
+    run_query(
+        simple_record_query(FileScan("Movie")))
 
 
 if __name__ == '__main__':

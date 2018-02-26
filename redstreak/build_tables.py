@@ -23,7 +23,8 @@ def movie_to_nt(_iter, recordtype):
 
 
 def main():
-    csv_path = "1kmovies.csv"
+    # csv_path = "kmovies.csv"
+    csv_path = "../../ml-20m/movies.csv"
     # csv_path = "../../ml-20m/ratings.csv"
 
     with open(csv_path, newline='') as csvfile:

@@ -102,7 +102,8 @@ class Aggregate(Scan):
     def aggregate_field(self, data):
         # todo this float conversion is wrong here. we should have good typing
         # all these aggregate fields are kinda dicy
-        return self.aggregate([float(d[self.field]) for d in data])
+        raise Exception("test")
+        return self.aggregate([float(d.get(self.field)) for d in data])
 
     def __next__(self):
         if self._done:

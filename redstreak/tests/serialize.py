@@ -12,6 +12,23 @@ from redstreak.serialize import read_all_pages, write_fresh_table
 Rating = SCHEMA["Rating"]
 
 
+def _make_ratings():
+    field_counter = (count(0), count(3), count(5.9), count(1112484727))
+    fields = ["userId", "movieId", "rating", "timestamp"]
+    while True:
+        yield Rating(**dict(zip(fields, (map(next, field_counter)))))
+
+
+def make_ratings(count=5):
+    return list(islice(_make_ratings(), 0, count))
+
+
+def make_single_rating():
+    fields = ["userId", "movieId", "rating", "timestamp"]
+    rating_fields = (99, 99, 99.9, 99999)
+    return Rating(**dict(zip(fields, rating_fields)))
+
+
 class TestIO(unittest.TestCase):
 
     def assert_records_match(self, recordsa, recordsb):
@@ -40,7 +57,7 @@ class TestIO(unittest.TestCase):
 
     def make_page(self):
         buf = io.BytesIO()
-        records = self.make_ratings()
+        records = make_ratings()
         write_page(buf, records)
         return records, buf
 
@@ -57,7 +74,7 @@ class TestIO(unittest.TestCase):
 
     def test_write_fat_page(self):
         buf = io.BytesIO()
-        records = self.make_ratings()
+        records = make_ratings()
         records = records * 100
         self.assertRaises(FatPageException, lambda: write_page(buf, records))
 
@@ -69,7 +86,7 @@ class TestIO(unittest.TestCase):
 
     def test_row_to_existing_table_space(self):
         records, buf = self.make_page()
-        new_record = self.make_single_rating()
+        new_record = make_single_rating()
         write_row_to_existing_file(buf, new_record)
         buf.seek(0)
         got_records = read_records_from_page(buf, Rating)
@@ -84,7 +101,7 @@ class TestIO(unittest.TestCase):
         # way to write your table...
         buf = io.BytesIO()
         # This should go to 4 pages
-        many_records = self.make_ratings(count=700)
+        many_records = make_ratings(count=700)
         for record in many_records:
             write_row_to_existing_file(buf, record)
 
@@ -99,7 +116,7 @@ class TestIO(unittest.TestCase):
         Test write_fresh_table, the prpoer way to write a table from scratch!
         """
         buf = io.BytesIO()
-        many_records = self.make_ratings(count=1000)
+        many_records = make_ratings(count=1000)
         write_fresh_table(buf, many_records)
 
         got_records = list(read_all_pages(buf, Rating))
@@ -108,23 +125,9 @@ class TestIO(unittest.TestCase):
         self.assertTrue(len(buf.getvalue()) > MAX_PAGE_BYTES)
         self.assertTrue(len(buf.getvalue()) % MAX_PAGE_BYTES == 0)
 
-    def _make_ratings(self):
-        field_counter = (count(0), count(3), count(5.9), count(1112484727))
-        fields = ["userId", "movieId", "rating", "timestamp"]
-        while True:
-            yield Rating(**dict(zip(fields, (map(next, field_counter)))))
-
-    def make_ratings(self, count=5):
-        return list(islice(self._make_ratings(), 0, count))
-
-    def make_single_rating(self):
-        fields = ["userId", "movieId", "rating", "timestamp"]
-        rating_fields = (99, 99, 99.9, 99999)
-        return Rating(**dict(zip(fields, rating_fields)))
-
 
 if __name__ == '__main__':
     unittest.main()
     # real  0m14.640s
-# user    0m14.564s
-# sys 0m0.044s
+    # user    0m14.564s
+    # sys 0m0.044s

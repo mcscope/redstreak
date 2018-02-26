@@ -12,6 +12,7 @@ import attr
 from construct import Struct, Int16ub, Float32b, Int32ub, Rebuild, Byte, this
 from construct import NamedTuple, Tell, Array, StreamError, FormatFieldError
 from construct import CString
+from redstreak.nodes import Scan
 
 MAX_PAGE_BYTES = 4096
 
@@ -273,7 +274,7 @@ def _can_fit_another_row(cur_size, new_size):
     return (cur_size + new_size + PAGE_HEADER_BYTES) < MAX_PAGE_BYTES
 
 
-def read_all_pages(buf, record_type):
+def read_all_pages(buf, record_type, close=False):
     """
     Read all rows out of all pages (into memory)
     This may not fit for large tables!
@@ -285,4 +286,18 @@ def read_all_pages(buf, record_type):
         yield from got_records
         got_records = read_records_from_page(buf, record_type)
         if not got_records:
+            if close:
+                # TODO what if we have an exception
+                buf.close()
             return
+
+
+class FileScan(Scan):
+    table = attr.ib(init=False)
+
+    def __attrs_post_init__(self):
+        # Data here is a string of a table!
+        # Let's look that sucker up!
+        self.table = TABLES[self.data]
+        buf = open(self.table.homefile, "rb")
+        self._iter = read_all_pages(buf, self.table.factory, close=True)

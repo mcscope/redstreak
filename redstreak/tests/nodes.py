@@ -4,6 +4,7 @@ import csv
 import os
 import redstreak.nodes as nodes
 import redstreak.sort as sort
+from redstreak.tests.shared import make_ratings
 
 
 class TestRedStreakNodes(unittest.TestCase):
@@ -161,6 +162,11 @@ class TestRedStreakNodes(unittest.TestCase):
             fullcsv = csvfile.readlines()
             return csv.reader(fullcsv)
 
+    def test_count_named_tuple(self):
+
+        self.assert_drain(nodes.Count('value',
+                                      make_ratings(count=101)),
+                          {"Count": 101})
 
 if __name__ == '__main__':
 
