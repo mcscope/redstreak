@@ -7,9 +7,11 @@ write/read from disk in a binary format
 
 import csv
 import tempfile
+import attr
 
 from construct import Struct, Int16ub, Float32b, Int32ub, Rebuild, Byte, this
 from construct import NamedTuple, Tell, Array, StreamError, FormatFieldError
+from construct import CString
 
 MAX_PAGE_BYTES = 4096
 
@@ -19,7 +21,6 @@ class FatPageException(Exception):
 
 
 def readtups(file):
-    raise NotImplementedError
     file.seek(0)
     #  read a stream of tuples out of this
     return csv.DictReader(file)
@@ -92,8 +93,14 @@ def make_page_for_record_construct(record_construct):
 
 RatingConstruct = NamedTuple("Rating",
                              "userId movieId rating timestamp",
-                             Int16ub >> Int16ub >> Float32b >> Int32ub
+                             Int32ub >> Int32ub >> Float32b >> Int32ub
                              )
+
+MovieConstruct = NamedTuple("Movie",
+                            "movieId title genres",
+                            Int32ub >> CString("utf8") >> CString("utf8")
+                            )
+
 
 # SCHEMA TABLE
 #  RIGHT NOW THESE ARE MANUALLY DEFINED NAMEDTUPLE CONSTRUCTS
@@ -107,9 +114,25 @@ RatingConstruct = NamedTuple("Rating",
 ROW_HEADER_BYTES = 8
 PAGE_HEADER_BYTES = 8
 
-SCHEMA_CONSTRUCTS = [RatingConstruct]
+SCHEMA_CONSTRUCTS = [RatingConstruct, MovieConstruct]
 SCHEMA_CONSTRUCT_MAP = {record_construct.factory: record_construct
                         for record_construct in SCHEMA_CONSTRUCTS}
+
+
+@attr.s
+class Table:
+    factory = attr.ib()
+    name = attr.ib()
+    homefile = attr.ib()
+
+
+TABLES = {
+    record_construct.factory.__name__: Table(
+        factory=record_construct.factory,
+        name=record_construct.factory.__name__,
+        homefile=record_construct.factory.__name__ + ".db"
+    ) for record_construct in SCHEMA_CONSTRUCTS
+}
 
 
 SCHEMA = {record_construct.factory.__name__: record_construct.factory
@@ -224,28 +247,29 @@ def write_fresh_table(buf, rows):
     keep going until record list is empty
     """
 
-    if not rows:
-        return
-    construct = SCHEMA_CONSTRUCT_MAP[type(rows[0])]
-    rows_and_sizes = [(row, len(construct.build(row)) + ROW_HEADER_BYTES)
-                      for row in rows]
-    if not all(size < MAX_PAGE_BYTES for row, size in rows_and_sizes):
-        raise Exception("Your Record Wont Fit On A Page! Implement Toast")
+    i_rows = iter(rows)
 
-    while rows_and_sizes:
-        cur_page_size = 0
-        selected_rows = []
-        while rows_and_sizes and _can_fit_another_row(cur_page_size,
-                                                      rows_and_sizes[-1]):
-            new_row, new_size = rows_and_sizes.pop()
+    cur_page_size = 0
+    selected_rows = []
+
+    while True:
+        try:
+            new_row = next(i_rows)
+            new_size = _estimate_row_size(new_row)
+        except StopIteration:
+            if selected_rows:
+                write_page(buf, selected_rows)
+            return
+        if _can_fit_another_row(cur_page_size, new_size):
             cur_page_size += new_size
             selected_rows.append(new_row)
+        else:
+            write_page(buf, selected_rows)
+            cur_page_size = new_size
+            selected_rows = [new_row]
 
-        write_page(buf, selected_rows)
 
-
-def _can_fit_another_row(cur_size, new_row_tup):
-    _, new_size = new_row_tup
+def _can_fit_another_row(cur_size, new_size):
     return (cur_size + new_size + PAGE_HEADER_BYTES) < MAX_PAGE_BYTES
 
 
@@ -256,20 +280,9 @@ def read_all_pages(buf, record_type):
     """
     buf.seek(0)
 
-    all_written_records = []
     got_records = read_records_from_page(buf, record_type)
     while got_records:
-        all_written_records.extend(got_records)
+        yield from got_records
         got_records = read_records_from_page(buf, record_type)
-
-    return all_written_records
-
-# def read_all_rows():
-    # in_memory_records = []
-    # make an iter
-    # open file
-    # when iter __next__
-    #   if len(in_memory_records) == 0:
-    # in_memory_records = read_records_from_page(file)
-    # return in_memory_records.pop()
-    # pass
+        if not got_records:
+            return

@@ -6,7 +6,7 @@ from itertools import count, islice
 from redstreak.serialize import readtups, writetups, SCHEMA
 from redstreak.serialize import write_page, read_records_from_page, MAX_PAGE_BYTES
 from redstreak.serialize import FatPageException, write_row_to_existing_file
-from redstreak.serialize import read_all_pages, write_fresh_table, write_row_to_existing_file_try_fail
+from redstreak.serialize import read_all_pages, write_fresh_table
 
 
 Rating = SCHEMA["Rating"]
@@ -75,7 +75,7 @@ class TestIO(unittest.TestCase):
         got_records = read_records_from_page(buf, Rating)
         self.assert_records_match(records + [new_record], got_records)
 
-    @unittest.skip("This is just hella long")
+    # @unittest.skip("This is just hella long")
     def test_row_to_existing_table_space_many(self):
         # please don't make your tables this way.
         # But this is a nice robust test that you can keep adding rows to a
@@ -88,22 +88,21 @@ class TestIO(unittest.TestCase):
         for record in many_records:
             write_row_to_existing_file(buf, record)
 
-        got_records = read_all_pages(buf, Rating)
+        got_records = list(read_all_pages(buf, Rating))
         self.assert_records_match(got_records, many_records)
         self.assertTrue(len(buf.getvalue()) > MAX_PAGE_BYTES)
         self.assertTrue(len(buf.getvalue()) % MAX_PAGE_BYTES == 0)
-        self.assertTrue(len(buf.getvalue()) == 4 * MAX_PAGE_BYTES)
+        self.assertTrue(len(buf.getvalue()) == 5 * MAX_PAGE_BYTES)
 
     def test_write_fresh_table(self):
         """
         Test write_fresh_table, the prpoer way to write a table from scratch!
         """
-
         buf = io.BytesIO()
         many_records = self.make_ratings(count=1000)
         write_fresh_table(buf, many_records)
 
-        got_records = read_all_pages(buf, Rating)
+        got_records = list(read_all_pages(buf, Rating))
 
         self.assert_records_match(got_records, many_records)
         self.assertTrue(len(buf.getvalue()) > MAX_PAGE_BYTES)

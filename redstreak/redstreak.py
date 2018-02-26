@@ -115,12 +115,12 @@ def main():
     # TODO remove
     csv_path = "../../ml-20m/movies.csv"
     # csv_path2 = "../../ml-20m/ratings.csv"
-    csv_path2 = "100kratings.csv"
+    csv_path2 = "1k"
 
-    with open(csv_path, newline='') as csvfile:
-        with open(csv_path2, newline='') as csvfile2:
+    with open(path. "wb") as file:
+        with open(ath2. "wb") as file2:
 
-            run_query(readtups(file), readtups(file))
+            run_query(read_all_pages(file), read_all_pages(file))
 
 
 if __name__ == '__main__':
