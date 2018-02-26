@@ -72,25 +72,40 @@ class NestedLoopJoin(Scan):
         return f"\n{_sub_explain(self.left)}"
 
 
+STOP_SIGNAL = object()
+START_SIGNAL = object()
+
+
 @attr.s
 class BufferedIter:
     _iter = attr.ib()
     field = attr.ib()
-    head = attr.ib(default=None)
-    matches = attr.ib(default=[])
+    head = attr.ib(default=START_SIGNAL)
+    matches = attr.ib(default=attr.Factory(list))
     matchfield = attr.ib(default=None)
 
     def __attrs_post_init__(self):
         self.fetch()
 
     def fetch(self):
-        self.head = next(self._iter)
-        # TODO catch
-        self.matchfield = self.head[field]
-        while self.head[self.field] == self.matchfield:
-            self.matches.append(lhead)
-            # todo catch StopIteration
+
+        if self.head == STOP_SIGNAL:
+            raise StopIteration
+        if self.head == START_SIGNAL:
             self.head = next(self._iter)
+
+        self.matches = []
+
+        # TODO catch
+        self.matchfield = self.head[self.field]
+        while self.head[self.field] == self.matchfield:
+            self.matches.append(self.head)
+            try:
+                self.head = next(self._iter)
+            except StopIteration:
+                self.head = STOP_SIGNAL
+                return
+            # todo catch StopIteration
 
         # TODO write to file if necessary
 
@@ -107,19 +122,27 @@ class SortMergeJoin(Scan):
     data = attr.ib()
 
     def join(self):
-        left = BufferedIter(self.left, self.field)
-        right = BufferedIter(self.data, self.field)
-        if right.matchfield == left.matchfield:
-            for left_record in left.matches:
-                for right_record in right.matches:
-                    new_record = left_record.copy()
-                    new_record.update(right_record)
-                    yield new_record
 
-        elif right.matchfield < left.matchfield:
-            right.fetch()
-        else:
-            left.fetch()
+        try:
+            left = BufferedIter(self.left, self.field)
+            right = BufferedIter(self.data, self.field)
+            while True:
+                if right.matchfield == left.matchfield:
+                    for left_record in left.matches:
+                        for right_record in right.matches:
+                            new_record = left_record.copy()
+                            new_record.update(right_record)
+                            yield new_record
+                    right.fetch()
+                    left.fetch()
+
+                elif right.matchfield < left.matchfield:
+                    right.fetch()
+                else:
+                    left.fetch()
+        except StopIteration:
+            # python 3.6ism. Generators return, don't stopiter
+            return
 
     def __iter__(self):
         return self.join()

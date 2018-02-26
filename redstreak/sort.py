@@ -3,7 +3,7 @@ import attr
 import inspect
 
 from redstreak.nodes import Scan
-from redstreak.io import readtups, writetups, Writer
+from redstreak.serialize import readtups, writetups, Writer
 
 MAX_MEMORY_SIZE_BYTES = 1000 * 1000 * 10  # Ten mbs
 # Sampled from ratings as Dicts, probably less as NamedTuples

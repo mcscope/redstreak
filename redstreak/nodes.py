@@ -33,8 +33,10 @@ class Scan:
         return next(self._iter)
 
     def reset(self):
-        self.data.reset()
-        self._iter = iter(self.data)
+        try:
+            self.data.reset()
+        except AttributeError:
+            self._iter = iter(self.data)
 
     def additional_explain(self):
         return ""

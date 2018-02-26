@@ -14,5 +14,6 @@ Spring 2018 by Lady Red
       packages=['redstreak'],
       install_requires=[
           "attrs",
+          "construct>=2.9.33"
       ]
       )

@@ -2,7 +2,7 @@ import csv
 import argparse
 from nodes import Limit, Order, Selection, Scan, NaiveInnerJoin, Mean
 from lib.profile import print_memory
-from io import readtups
+from serialize import readtups
 
 """
 RedStreak - an example Database
